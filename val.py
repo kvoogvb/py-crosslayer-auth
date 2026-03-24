@@ -23,17 +23,22 @@ class Wifi_test_data:
         return self.dfs[usr_id-1].sample(n=n).iloc[0].values
 
 data = Wifi_test_data()
+model_name = 'save/v5_ok.pth'
+model_cache = None
 
 
-def load_model(net,path):
-    checkpoint = torch.load(path)
+def load_model():
+    net = getnet()
+    checkpoint = torch.load(model_name)
     model_dict = net.state_dict()
     pretrained_dict = {k: v for k, v in checkpoint['model_state_dict'].items() 
             if k in model_dict and v.shape == model_dict[k].shape}
     model_dict.update(pretrained_dict)
     net.load_state_dict(model_dict,strict=True)
-    return net
+    model_cache = net
+    return model_cache
 
+#just for test
 def test_model(model_path):
     net = getnet()
     net = load_model(net,model_path)
@@ -43,16 +48,7 @@ def test_model(model_path):
     acc,loss = cal_test(net,test_iter,torch.nn.CrossEntropyLoss(),device)
     print(acc)
 
-def val(usr_id: int | list):
-    start = datetime.now()
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    net = getnet()
-    net = load_model(net,'v5_ok.pth')
-    device = 'cpu'
-    net.to(device)
-    net.eval()
-
-    start = datetime.now()
+def id2wifi(usr_id: int | list)->torch.tensor:
     if isinstance(usr_id,int):
         usr_id = [usr_id]
   
@@ -63,7 +59,25 @@ def val(usr_id: int | list):
         X = np.array(X)
         X = torch.tensor(X,dtype=torch.float32)
         if len(X.shape) == 2:  # (batch, 256)
-            X = X.unsqueeze(1)  # -> (batch, 1, 256)
+            X = X.unsqueeze(1) # -> (batch, 1, 256)
+        return X
+    return None
+
+def val_test(usr_id: int | list):
+    start = datetime.now()
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    net = getnet()
+    net = load_model(net,model_name)
+    device = 'cpu'
+    net.to(device)
+    net.eval()
+
+    start = datetime.now()
+    if isinstance(usr_id,int):
+        usr_id = [usr_id]
+  
+    if isinstance(usr_id,list):
+        X = id2wifi(usr_id)
         X = X.to(device)
         
         with torch.no_grad():
@@ -75,27 +89,46 @@ def val(usr_id: int | list):
         cost = (end-start).total_seconds()
         return ans,cost
     
-def val_test(ids=None):
-    
-    if ids is None:
-        n = len(sys.argv) - 1
-        if n == 0:
-            print("usage python val.py id1 id2 ...")
-        ids = sys.argv[1:]
-    n = len(ids)
-    for id in ids:
-        assert id in [1,2,3,4,5,6],"wrong id"
-    pred,gt = val(ids)
-    sum_right = 0
-    for i in range(n):
-        if pred[i] == gt[i]: sum_right+=1
-    print(f'acc:{sum_right/n*100} %')
+def val_user(usr_id: int|list,wifi_data:torch.tensor):
+    if  model_cache is None:
+        net = load_model()
+    else:
+        net = model_cache
+    device = 'cpu'
+    net.to(device)
+    net.eval()
 
-ans,cost = val(1)
-# ans,cost = val([1,1,1,1,1,1])
+    start = datetime.now()
+    if isinstance(usr_id,int):
+        usr_id = [usr_id]
+  
+    if isinstance(usr_id,list):
+        X = wifi_data
+        X = X.to(device)
+        
+        with torch.no_grad():
+            y_hat = net(X)
+        pred_ids = torch.argmax(y_hat,dim=1) + 1
+        pred_ids = pred_ids.cpu().tolist()
+        ans = [pred == gt for pred,gt in zip(pred_ids,usr_id)]
+        end = datetime.now()
+        cost = (end-start).total_seconds()
+        return ans,cost
+
+def val(claim_id: int|list,wifi_data_id:int|list):
+    if not (isinstance(claim_id,int) and isinstance(wifi_data_id,int)):
+        if not (isinstance(claim_id,list) and isinstance(wifi_data_id,list)):
+            print("claim_id not match wifi_data_id")
+            return None,None
+        else:
+            assert len(claim_id) == len(wifi_data_id),"claim_id length not match wifi_data_id"
+
+    wifi_data = id2wifi(wifi_data_id)
+    return val_user(claim_id,wifi_data)
+
+ans,cost = val([1,2,3,4,5,6],[1,2,3,3,3,3])
 print(ans,cost)
-# test_model('v2_ok.pth')
 
-    
+
 
     
