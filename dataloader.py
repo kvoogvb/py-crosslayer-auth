@@ -40,7 +40,7 @@ class CSVDataset(Dataset):
     def __getitem__(self, idx):
         features, label = self.samples[idx]
         return (
-            torch.tensor(features, dtype=torch.float32),
+            torch.tensor(features, dtype=torch.float32).unsqueeze(0),
             torch.tensor(label, dtype=torch.long)
         )
 

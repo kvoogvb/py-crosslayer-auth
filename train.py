@@ -170,4 +170,4 @@ def start_train(batch_size=1024):
     
 
 if __name__=='__main__':
-    start_train()
+    start_train(4096)
