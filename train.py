@@ -155,14 +155,15 @@ def start_train(batch_size=1024):
     train_iter = get_dataloader('data',batch_size,'train',shuffle=True,num_workers=4)
     test_iter = get_dataloader('data',batch_size,'test',shuffle=True,num_workers=4)
     net = getnet()
-    lr = 0.1
-    wd = 1e-5
-    epoch = 100
+    lr = 0.01
+    wd = 0
+    epoch = 35
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     start = datetime.now()
     
     writer = SummaryWriter('log',f'{start.strftime("%m月%d日%H;%M;%S")}_{lr}_{wd}')
-    optimizer = torch.optim.Adam(params=net.parameters(),lr=lr,weight_decay=wd)
+    # optimizer = torch.optim.Adam(params=net.parameters(),lr=lr,weight_decay=wd)
+    optimizer = torch.optim.SGD(params=net.parameters(),lr=lr,weight_decay=wd,momentum=0.9,)
     train_l,train_acc,test_acc,opt = train(net,train_iter,test_iter,epoch,device,writer,optimizer)
     save_paramter(net,optimizer)
     writer.close()

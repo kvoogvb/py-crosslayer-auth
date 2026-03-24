@@ -11,7 +11,11 @@ import os
 import shutil
 
 
-structure = [(32,64,2),(64,128,2),(128,256,2)]
+# structure = [(32,64,2),(64,128,2),(128,256,2)] #v2_ok.pth
+# structure = [(32,64,2),(64,128,2)] #v3_ok.pth
+# structure = [(32,64,2)] #v4_ok.pth
+structure = [(64,64,1)] #v5_ok.pth
+
 id = 0
 class Residual(nn.Module):
     def __init__(self, ci,co,bottleneck=False,stride=1, **kwargs):
@@ -57,12 +61,13 @@ def resnet_block(pre_co,co,num,keepsize=False):
 
 def getnet(adjust=False,keepsize=None):
 
+    co_init=structure[0][0]
     net = nn.Sequential(
-        nn.Conv1d(1,32,kernel_size=7,stride=2,padding=3),nn.BatchNorm1d(32),nn.ReLU(),
+        nn.Conv1d(1,co_init,kernel_size=7,stride=2,padding=3),nn.BatchNorm1d(co_init),nn.ReLU(),
     )
 
     flag=1
-    pre_co=32
+    pre_co=co_init
     for (ci,co,num) in structure:
         if flag:
             net.append(
@@ -79,7 +84,7 @@ def getnet(adjust=False,keepsize=None):
     net.append(nn.Sequential(
         nn.AdaptiveAvgPool1d(1),nn.Flatten(),
         # nn.Dropout(0.5),
-        nn.Linear(256,6)
+        nn.Linear(pre_co,6)
     ))
     return net
 
