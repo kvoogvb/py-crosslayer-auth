@@ -22,6 +22,7 @@ model_cache = None
 class Val:
     def __init__(self,data_dir:str = 'data',model_name = 'save/v5_ok.pth'):
         self.data = Wifi_test_data(data_dir=data_dir)
+        self.model_cache = None
         self.model_cache = self.load_model(model_name)
 
     def load_model(self,model_name:str=None):
