@@ -1,7 +1,5 @@
-import math
 import torch
 from torch import nn
-from d2l import torch as d2l
 from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
 from torch.optim import lr_scheduler
@@ -33,6 +31,30 @@ def clear_line():
     """清除当前行"""
     print('\r\033[K', end='', flush=True)
 
+def accuracy(y_hat, y):
+    """Compute the number of correct predictions.
+
+    Defined in :numref:`sec_softmax_scratch`"""
+    if len(y_hat.shape) > 1 and y_hat.shape[1] > 1:
+        y_hat = torch.argmax(y_hat, axis=1)
+    cmp = torch.astype(y_hat, y.dtype) == y
+    return float(torch.reduce_sum(torch.astype(cmp, y.dtype)))
+
+class Accumulator:
+    """For accumulating sums over `n` variables."""
+    def __init__(self, n):
+        """Defined in :numref:`sec_softmax_scratch`"""
+        self.data = [0.0] * n
+
+    def add(self, *args):
+        self.data = [a + float(b) for a, b in zip(self.data, args)]
+
+    def reset(self):
+        self.data = [0.0] * len(self.data)
+
+    def __getitem__(self, idx):
+        return self.data[idx]
+
 def cal_test(net,data_iter,loss,device,cal_acc=True):
     test_loss,test_acc,samples = 0,0,0
     net.eval()
@@ -48,7 +70,7 @@ def cal_test(net,data_iter,loss,device,cal_acc=True):
             l = loss(y_hat,y)
             test_loss += l*X.shape[0]
             if cal_acc:
-                test_acc += d2l.accuracy(y_hat,y)
+                test_acc += accuracy(y_hat,y)
             samples += X.shape[0]
     return test_acc/samples,test_loss/samples
 
@@ -57,15 +79,6 @@ def soft_cross_entropy(y_hat,y):
     #only use when mix up,mixup give one hot key y
     return torch.mean(torch.sum(-y * log_probs, dim=1))
 
-def trainer(net, train_iter, test_iter, num_epochs, lr,device,writer,momentum=0,wd=0,
-            optimizer = None,loss = nn.CrossEntropyLoss(),mixup=False,scheduler=None):
-    if optimizer == None:
-        optimizer = torch.optim.Adam(params=net.parameters(),lr=lr,weight_decay=wd)
-    # if opt == 'sgd':
-    #     optimizer = torch.optim.SGD(params=net.parameters(),lr=lr,weight_decay=wd,momentum=momentum)
-
-    return train(net, train_iter, test_iter, num_epochs,device,writer,opt = optimizer,loss=loss,mixup=mixup,scheduler=scheduler)
-
 def train(net, train_iter, test_iter, num_epochs,device,writer,opt,loss= nn.CrossEntropyLoss(),scheduler=None):
 
     print("training on",device)
@@ -73,11 +86,7 @@ def train(net, train_iter, test_iter, num_epochs,device,writer,opt,loss= nn.Cros
     print("done 0 % of an epoch")
     net = net.to(device)
     # opt.to(device)
-    timer, num_batches = d2l.Timer(), len(train_iter)
-    # if mixup:
-    #     # loss = nn.KLDivLoss(reduction='batchmean')
-    #     loss = soft_cross_entropy()
-
+    num_batches = len(train_iter)
 
     with open('temlog.txt', 'w', encoding='utf-8') as file:
         file.write(datetime.now().strftime("%m月%d日%H;%M;%S")+"\n")
@@ -85,11 +94,10 @@ def train(net, train_iter, test_iter, num_epochs,device,writer,opt,loss= nn.Cros
     cnt = 10
     scaler = GradScaler()
     for epoch in range(num_epochs):
-        metric = d2l.Accumulator(3)
+        metric = Accumulator(3)
         net.train()
         samples = 5
         for i,(X,y) in enumerate(train_iter):
-            timer.start()
             opt.zero_grad()
             X,y = X.to(device),y.to(device)
             with autocast(device_type='cuda'):
@@ -103,8 +111,7 @@ def train(net, train_iter, test_iter, num_epochs,device,writer,opt,loss= nn.Cros
             # l.backward()
             # opt.step()
             with torch.no_grad():
-                metric.add(l * X.shape[0], d2l.accuracy(y_hat, y), X.shape[0])
-            timer.stop()
+                metric.add(l * X.shape[0], accuracy(y_hat, y), X.shape[0])
             train_l = metric[0] / metric[2]
             train_acc = metric[1] / metric[2]
             if (i + 1) % (num_batches // 3) == 0 or i == num_batches - 1:
@@ -117,7 +124,6 @@ def train(net, train_iter, test_iter, num_epochs,device,writer,opt,loss= nn.Cros
                 print("done",samples,"% of an epoch")
                 samples+=5
 
-        # test_acc = d2l.evaluate_accuracy_gpu(net, test_iter,device=device)
         test_acc,test_l = cal_test(net,test_iter,nn.CrossEntropyLoss(),device)
         writer.add_scalar("Test_acc",test_acc,epoch)
         writer.add_scalar("Test_loss",test_l,epoch)
@@ -147,8 +153,8 @@ def train(net, train_iter, test_iter, num_epochs,device,writer,opt,loss= nn.Cros
             
     print(f'loss {train_l:.3f}, train acc {train_acc:.3f}, '
           f'test acc {test_acc:.3f}')
-    print(f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec '
-          f'on {str(device)}')
+    # print(f'{metric[2] * num_epochs / timer.sum():.1f} examples/sec '
+    #       f'on {str(device)}')
     return train_l,train_acc,test_acc,opt
 
 def start_train(batch_size=1024):
