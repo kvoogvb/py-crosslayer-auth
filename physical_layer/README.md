@@ -4,7 +4,8 @@
 - requirements.txt
 - python > 3.10
 ### api
-#### Val(self,data_dir:str = 'data',model_name = 'save/v5_ok.pth')
+> 物理层认证只有一个接口,在val.py
+#### class Val(self,data_dir:str = 'data',model_name = 'save/v5_ok.pth') 
 - data_dir: 数据目录
 - model_name: 模型文件
 #### Val.val(claim_id: int|list,wifi_data_id:int|list): in val.py
