@@ -1,11 +1,5 @@
-import math
 import torch
-from torch import nn
-from d2l import torch as d2l
-from torch.utils.tensorboard import SummaryWriter
 from datetime import datetime
-from torch.optim import lr_scheduler
-from torch.amp import autocast, GradScaler
 from dataloader import get_dataloader
 from model import getnet
 from train import cal_test
@@ -14,10 +8,10 @@ import pandas as pd
 import numpy as np
 
 class Wifi_test_data:
-    def __init__(self):
+    def __init__(self,data_dir:str = 'data'):
         self.dfs = []
         for i in range(1,7):
-            df = pd.read_csv(f'data/{i}_test.csv')
+            df = pd.read_csv(f'{data_dir}/{i}_test.csv')
             self.dfs.append(df)
     def get_random_row(self,usr_id,n=1):
         return self.dfs[usr_id-1].sample(n=n).iloc[0].values

@@ -1,14 +1,7 @@
-import math
-import torch
 from torch import nn
-from d2l import torch as d2l
-from torch.utils.tensorboard import SummaryWriter
 from torch.nn import functional as F
-from datetime import datetime
 from collections import OrderedDict
-import sys
-import os
-import shutil
+
 
 
 # structure = [(32,64,2),(64,128,2),(128,256,2)] #v2_ok.pth
