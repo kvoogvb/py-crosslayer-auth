@@ -29,7 +29,7 @@ class Val:
         if self.model_cache is not None and model_name is None:
             return self.model_cache
         net = getnet()
-        checkpoint = torch.load(model_name, map_location=torch.device('cpu'))
+        checkpoint = torch.load(model_name, map_location=torch.device('cpu'), weights_only=True)
         model_dict = net.state_dict()
         pretrained_dict = {k: v for k, v in checkpoint['model_state_dict'].items() 
                 if k in model_dict and v.shape == model_dict[k].shape}

@@ -33,7 +33,7 @@ def register(user_id, pub_key):
         print(f"[ERROR] 注册失败: {e}")
         return False
 
-def authenticate(user_id, priv_key, label="认证"):
+def authenticate(user_id, priv_key, simulate_wifi_id=1, label="认证"):
     """执行挑战-应答身份认证流程 (对应步骤 1-4)"""
     print(f"\n[AUTH] === {label}: 用户 {user_id} 发起流程 ===")
     try:
@@ -41,10 +41,11 @@ def authenticate(user_id, priv_key, label="认证"):
             s.connect((HOST, PORT))
             
             # 步骤 1: 发起初步接入请求 (Identity Claim)
-            print(f"[AUTH] 步骤 1: 发送身份声明请求 (User ID: {user_id})")
+            print(f"[AUTH] 步骤 1: 发送身份声明请求 (User ID: {user_id}), 并携带底层模拟特征({simulate_wifi_id})")
             auth_request = {
                 "type": "authenticate",
-                "user_id": user_id
+                "user_id": user_id,
+                "simulate_wifi_id": simulate_wifi_id
             }
             s.sendall(json.dumps(auth_request).encode('utf-8'))
             
@@ -94,23 +95,28 @@ if __name__ == "__main__":
     print("====================================================")
 
     # 准备密钥对
-    pub_a, priv_a = generate_keys() # 用户 A (合法用户)
-    pub_b, priv_b = generate_keys() # 用户 B (未注册用户)
-    pub_c, priv_c = generate_keys() # 用户 C (伪装攻击者)
+    pub_a, priv_a = generate_keys() # 用户 A (合法用户, 设备指纹属于 1)
+    pub_b, priv_b = generate_keys() # 用户 B (未注册用户, 设备指纹属于 2)
+    pub_c, priv_c = generate_keys() # 用户 C (伪装攻击者, 设备指纹属于 3)
 
-    # --- 场景 1: 用户A (合法用户) ---
-    print("\n--- 场景 1: 合法用户正常接入流程 ---")
+    # --- 场景 1: 用户A (合法主体接入) ---
+    print("\n--- 场景 1: 合法用户常规接入验证 (跨层双因素认证通过) ---")
     if register("User_A", pub_a):
-        authenticate("User_A", priv_a, label="场景 1")
+        authenticate("User_A", priv_a, simulate_wifi_id=1, label="场景 1")
 
-    # --- 场景 2: 用户B (未注册用户) ---
-    print("\n--- 场景 2: 未注册非法用户尝试接入 ---")
-    authenticate("User_B", priv_b, label="场景 2")
+    # --- 场景 2: 用户B (未授权身份接入尝试) ---
+    print("\n--- 场景 2: 未授权终端接入尝试 (密码学认证层检测并阻断) ---")
+    authenticate("User_B", priv_b, simulate_wifi_id=2, label="场景 2")
 
-    # --- 场景 3: 用户C (伪装攻击者) ---
-    print("\n--- 场景 3: 攻击者冒用 User_A 身份尝试接入 ---")
-    # 哪怕攻击者自己注册过 (User_C)，但冒用 A 的 ID 时签名会失效
+    # --- 场景 3: 用户C (非授权密钥签名伪造) ---
+    print("\n--- 场景 3: 非法终端使用末匹配密钥进行身份伪造 (密码学签名校验失败) ---")
     register("User_C", pub_c) 
-    authenticate("User_A", priv_c, label="场景 3")
+    authenticate("User_A", priv_c, simulate_wifi_id=3, label="场景 3")
 
-    print("\n[SYSTEM] 所有测试场景演练结束。")
+    # --- 场景 4: 凭证泄露下的设备克隆攻击 (跨层防范演练) ---
+    print("\n--- 场景 4: \033[93m【跨层联动安全演练】\033[0m 应用层密钥泄露环境下的高级设备克隆攻击防御 ---")
+    # 威胁模型假设：攻击者已完整窃取合法用户 (User_A) 的数字密钥 (priv_a)，能够成功规避应用层的密码学防线。
+    # 防御行为：系统截获实测物理层空口信号，由于入侵者发射端硬件的射频指纹（特征类型：3）与声明身份应匹配的合法特征（特征类型：1）存在本质差异，触发底层强制拦截。
+    authenticate("User_A", priv_a, simulate_wifi_id=3, label="场景 4")
+
+    print("\n[SYSTEM] 所有测试场景演练及跨层验证结束。")
