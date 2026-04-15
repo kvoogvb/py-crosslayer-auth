@@ -4,12 +4,14 @@
 本实验通过模拟无线网络环境，实现了一个结合**上层密码学认证**与**底层物理层指纹特征**的跨层联动身份认证系统。系统核心利用 RSA 挑战-应答（Challenge-Response）机制，确保接入设备的身份合法性。
 
 ## 文件结构 (File Structure)
-- [server.py](server.py): **模块化服务端**。
-  - `handle_registration`: 注册公钥到内存数据库。
-  - `handle_authentication`: 驱动完整的身份认证状态机逻辑。
-- [client.py](client.py): **交互式模拟器**。
-  - 按照 PPT 逻辑（步骤 1-4）演示合法接入、非法接入、冒充攻击 3 个场景。
-- [test.py](test.py): **协议一致性测试**。验证模块化后的函数逻辑与异常处理能力。
+- [crypto_layer/](crypto_layer/): **上层密码学认证模块**。
+  - [server.py](crypto_layer/server.py): 模块化服务端。
+    - `handle_registration`: 注册公钥到内存数据库。
+    - `handle_authentication`: 驱动完整的身份认证状态机逻辑。
+  - [client.py](crypto_layer/client.py): 交互式模拟器。
+    - 按照 PPT 逻辑（步骤 1-4）演示合法接入、非法接入、冒充攻击 3 个场景。
+- [physical_layer/](physical_layer/): **底层物理层指纹特征认证模块**。
+  - `model.py` 等：基于 PyTorch 的一维 ResNet 网络模型进行身份指纹判别。
 - [Wi-Fi data/](Wi-Fi%20data/): 供后续物理层认证扩展使用的发射机指纹 CSV 数据。
 
 ## 实验逻辑与流程映射 (Experimental Logic)
@@ -33,7 +35,6 @@
 - `[AUTH FAIL]`: 记录被拦截的非法或伪冒尝试。
 
 ## 运行指南 (Running Instructions)
-1. 启动服务器: `python server.py`
-2. 运行客户端演示: `python client.py`
-3. 运行自动化验证: `python test.py`
+1. 启动服务器: `cd crypto_layer && python server.py`
+2. 运行客户端演示: `cd crypto_layer && python client.py`
 

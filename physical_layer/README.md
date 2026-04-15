@@ -1,8 +1,8 @@
 ## physical layer
 > a submode
 ### env
-- requirements.txt
 - python > 3.10
+- (依赖请参考项目根目录的 requirements.txt)
 ### api
 #### Val(self,data_dir:str = 'data',model_name = 'save/v5_ok.pth')
 - data_dir: 数据目录

@@ -29,7 +29,7 @@ class Val:
         if self.model_cache is not None and model_name is None:
             return self.model_cache
         net = getnet()
-        checkpoint = torch.load(model_name)
+        checkpoint = torch.load(model_name, map_location=torch.device('cpu'))
         model_dict = net.state_dict()
         pretrained_dict = {k: v for k, v in checkpoint['model_state_dict'].items() 
                 if k in model_dict and v.shape == model_dict[k].shape}
@@ -121,8 +121,19 @@ class Val:
         wifi_data = self.id2wifi(wifi_data_id)
         return self.val_user(claim_id,wifi_data)
 
-ans,cost = Val('data','save/v5_ok.pth').val([1,2,3,4,5,6],[1,2,3,3,3,3])
-print(ans,cost)
+if __name__ == "__main__":
+    import os
+    print("--- 开始物理层特征身份验证测试 ---")
+    # 模拟场景：声明身份是 1,2,3,4,5,6，但实际传入的物理层特征对应的是 1,2,3,3,3,3
+    # 预期结果：前三个验证通过(True)，后三个由于特征与身份不符，应被拦截(False)
+    
+    # 兼容从根目录运行时的相对路径
+    data_dir = 'physical_layer/data' if os.path.exists('physical_layer/data') else 'data'
+    model_dir = 'physical_layer/save/v5_ok.pth' if os.path.exists('physical_layer/save/v5_ok.pth') else 'save/v5_ok.pth'
+    
+    ans, cost = Val(data_dir, model_dir).val([1, 2, 3, 4, 5, 6], [1, 2, 3, 3, 3, 3])
+    print(f"认证结果 (True为通过): {ans}")
+    print(f"推理耗时: {cost:.6f} 秒")
 
 
 
